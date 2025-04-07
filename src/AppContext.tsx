@@ -2,7 +2,6 @@ import React, {
     useContext,
     createContext,
     useState,
-    MouseEventHandler,
     useEffect
 } from 'react';
 import { AuthCodeMSALBrowserAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/authCodeMsalBrowser';
@@ -28,8 +27,8 @@ export interface AppError {
 type AppContext = {
   user?: AppUser;
   error?: AppError;
-  signIn?: MouseEventHandler<HTMLElement>;
-  signOut?: MouseEventHandler<HTMLElement>;
+  signIn?: () => Promise<void>;
+  signOut?: () => Promise<void>;
   displayError?: Function;
   clearError?: Function;
   authProvider?: AuthCodeMSALBrowserAuthenticationProvider;
@@ -107,6 +106,7 @@ function useProvideAppContext() {
                     }
                 }
                 catch (err: any) {
+                    console.log(err);
                     displayError(err.message);
                 }
                 finally {
@@ -154,6 +154,7 @@ function useProvideAppContext() {
         }
         finally {
             setIsLoading(false);
+            window.location.reload();
         }
     };
 

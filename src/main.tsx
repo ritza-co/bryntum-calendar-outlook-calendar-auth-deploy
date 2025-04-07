@@ -24,6 +24,8 @@ const msalInstance = new PublicClientApplication({
     }
 });
 
+await msalInstance.initialize();
+
 // Check if there are already accounts in the browser session
 // If so, set the first account as the active account
 const accounts = msalInstance.getAllAccounts();

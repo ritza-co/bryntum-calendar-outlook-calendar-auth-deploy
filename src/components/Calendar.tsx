@@ -6,22 +6,17 @@ import SignInModal from './SignInModal';
 import { AuthenticatedTemplate, UnauthenticatedTemplate } from '@azure/msal-react';
 import { BryntumButton, BryntumCalendar } from '@bryntum/calendar-react';
 import bryntumLogo from '../assets/bryntum-symbol-white.svg';
-import { EventModel } from '@bryntum/calendar';
+import { EventModel, Model, ProjectConsumer, ProjectModelMixin, Store, Toast } from '@bryntum/calendar';
 import { BryntumSync } from '../crudHelpers';
 
-interface BryntumRecord {
-    data: {
-        id: string;
-        name: string;
-        startDate: string;
-        endDate: string;
-        allDay: boolean;
-    };
-}
-
 interface SyncDataParams {
-    action: 'add' | 'update' | 'remove' | 'dataset';
-    records: BryntumRecord[];
+    source: typeof ProjectConsumer | any;
+    project: typeof ProjectModelMixin | any;
+    store: Store;
+    action: 'remove' | 'removeAll' | 'add' | 'clearchanges' | 'filter' | 'update' | 'dataset' | 'replace';
+    record: Model;
+    records: Model[];
+    changes: object
 }
 
 export default function Calendar() {
@@ -42,7 +37,7 @@ export default function Calendar() {
         startDate: string,
         endDate: string,
         allDay: boolean,
-        action: 'add' | 'update' | 'remove'
+        action: 'add' | 'update' | 'remove' | 'removeAll' | 'clearchanges' | 'filter' | 'update' | 'dataset' | 'replace'
     ) => {
         if (!app.authProvider) return;
         return BryntumSync(
@@ -64,11 +59,11 @@ export default function Calendar() {
         }
         records.forEach((record) => {
             syncWithOutlook(
-                record.data.id,
-                record.data.name,
-                record.data.startDate,
-                record.data.endDate,
-                record.data.allDay,
+                record.get('id'),
+                record.get('name'),
+                record.get('startDate'),
+                record.get('endDate'),
+                record.get('allDay'),
                 action
             );
         });
@@ -110,7 +105,7 @@ export default function Calendar() {
                             name      : `${event.subject}`,
                             startDate : startDate?.toISOString(),
                             endDate   : endDate?.toISOString(),
-                            allDay    : event.isAllDay || false,
+                            allDay    : event.isAllDay || false
                         });
                     });
                     setEvents(calendarEvents);
@@ -124,6 +119,15 @@ export default function Calendar() {
 
         loadEvents();
     }, [app.user, app.authProvider, events, app.displayError]);
+
+    useEffect(() => {
+        if (app.error) {
+            Toast.show({ 
+                html: app.error.message, 
+                timeout: 0
+            });
+        }
+    }, [app.error]);
 
     const calendarConfig = useMemo(() => ({
         defaultMode      : 'week',
@@ -143,7 +147,7 @@ export default function Calendar() {
             }
         },
         onDataChange     : syncData,
-        onAfterEventSave : addRecord,
+        onAfterEventSave : addRecord
     }), [syncData, addRecord]);
 
     return (
@@ -159,7 +163,7 @@ export default function Calendar() {
                 <AuthenticatedTemplate>
                     <BryntumButton
                         cls="b-raised"
-                        text={app.isLoading ? 'Signing out...' : 'Sign out'}
+                        text={app.user && app.isLoading ? 'Signing out...' : 'Sign out'}
                         color='b-blue'
                         onClick={() => app.signOut?.()}
                         disabled={app.isLoading}

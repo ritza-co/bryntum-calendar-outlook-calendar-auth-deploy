@@ -2,7 +2,7 @@ import { AuthCodeMSALBrowserAuthenticationProvider } from '@microsoft/microsoft-
 import { createEvent, updateEvent, deleteEvent } from './GraphService';
 import { EventModel } from '@bryntum/calendar';
 import React from 'react';
-import { differenceInBusinessDays, differenceInDays } from 'date-fns';
+import { differenceInDays } from 'date-fns';
 
 export async function BryntumSync(
     id: string,
@@ -10,7 +10,7 @@ export async function BryntumSync(
     startDate: string,
     endDate: string,
     allDay: boolean,
-    action: 'add' | 'update' | 'remove',
+    action: 'remove' | 'removeAll' | 'add' | 'clearchanges' | 'filter' | 'update' | 'dataset' | 'replace',
     setEvents: React.Dispatch<React.SetStateAction<Partial<EventModel>[] | undefined>>,
     authProvider: AuthCodeMSALBrowserAuthenticationProvider,
     timeZone: string
@@ -19,7 +19,7 @@ export async function BryntumSync(
     const adjustDateForAllDay = (start: string, end: string) => {
         const startDate = new Date(start);
         const endDate = new Date(end);
-        
+
         // Extract year, month, day directly from the date
         const startYear = startDate.getFullYear();
         const startMonth = startDate.getMonth(); // Already 0-based
@@ -28,16 +28,16 @@ export async function BryntumSync(
         const endYear = endDate.getFullYear();
         const endMonth = endDate.getMonth(); // Already 0-based
         const duration = differenceInDays(endDate, startDate);
-        const endDay = endDate.getDate() + (duration === 0 ? 1 : 0);  
+        const endDay = endDate.getDate() + (duration === 0 ? 1 : 0);
 
         const utcStartDate = new Date(Date.UTC(startYear, startMonth, startDay));
         const utcEndDate = new Date(Date.UTC(endYear, endMonth, endDay));
-        
-        return {utcStartDate: utcStartDate.toISOString(), utcEndDate: utcEndDate.toISOString()};
+
+        return { utcStartDate : utcStartDate.toISOString(), utcEndDate : utcEndDate.toISOString() };
     };
 
-    const {utcStartDate, utcEndDate} = adjustDateForAllDay(startDate, endDate);
-   
+    const { utcStartDate, utcEndDate } = adjustDateForAllDay(startDate, endDate);
+
     const eventData = {
         subject : name || 'New Event',
         start   : {
