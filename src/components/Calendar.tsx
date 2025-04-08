@@ -1,7 +1,7 @@
 import { useAppContext } from '../AppContext';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { findIana } from 'windows-iana';
-import { getUserWeekCalendar } from '../GraphService';
+import { getUserFutureCalendar, getUserPastCalendar, getUserWeekCalendar } from '../GraphService';
 import SignInModal from './SignInModal';
 import { AuthenticatedTemplate, UnauthenticatedTemplate } from '@azure/msal-react';
 import { BryntumButton, BryntumCalendar } from '@bryntum/calendar-react';
@@ -10,8 +10,8 @@ import { EventModel, Model, ProjectConsumer, ProjectModelMixin, Store, Toast } f
 import { BryntumSync } from '../crudHelpers';
 
 interface SyncDataParams {
-    source: typeof ProjectConsumer | any;
-    project: typeof ProjectModelMixin | any;
+    source: typeof ProjectConsumer;
+    project: typeof ProjectModelMixin;
     store: Store;
     action: 'remove' | 'removeAll' | 'add' | 'clearchanges' | 'filter' | 'update' | 'dataset' | 'replace';
     record: Model;
@@ -23,6 +23,8 @@ export default function Calendar() {
     const app = useAppContext();
     const [events, setEvents] = useState<Partial<EventModel>[]>();
     const calendarRef = useRef(null);
+    const hasFetchedInitialEvents = useRef(false);
+    const hasRunFirstEffect = useRef(false);
 
     // Convert Windows timezone to IANA format for Bryntum
     const timeZone = useMemo(() => {
@@ -67,7 +69,7 @@ export default function Calendar() {
                 action
             );
         });
-    }, [syncWithOutlook, app.user?.timeZone]);
+    }, [syncWithOutlook]);
 
     const addRecord = useCallback((event: { eventRecord: EventModel }) => {
         const { eventRecord } = event;
@@ -90,10 +92,13 @@ export default function Calendar() {
     useEffect(() => {
         const loadEvents = async() => {
             if (app.user && !events) {
+                if (hasRunFirstEffect.current) {
+                    return;
+                }
+                hasRunFirstEffect.current = true;
                 try {
                     const ianaTimeZones = findIana(app.user?.timeZone || 'UTC');
                     const outlookEvents = await getUserWeekCalendar(app.authProvider!, ianaTimeZones[0].valueOf());
-
                     const calendarEvents: Partial<EventModel>[] = [];
                     outlookEvents.forEach((event) => {
                         // Convert the dates to the calendar's timezone
@@ -120,11 +125,70 @@ export default function Calendar() {
         loadEvents();
     }, [app.user, app.authProvider, events, app.displayError]);
 
+    // load more events from outlook
+    useEffect(() => {
+        // Skip if still loading or if we've already fetched events
+        if (!app.user) return;
+        if (app.isLoading) return;
+        if (hasFetchedInitialEvents.current) return;
+
+        async function fetchAllData() {
+            try {
+                hasFetchedInitialEvents.current = true;
+                const ianaTimeZones = findIana(app.user?.timeZone || 'UTC');
+                const [calendarPastEvents, calendarFutureEvents] = await Promise.all([getUserPastCalendar(app.authProvider!, ianaTimeZones[0].valueOf()), getUserFutureCalendar(app.authProvider!, ianaTimeZones[0].valueOf())]);
+
+                const pastEvents: Partial<EventModel>[] = [];
+                const futureEvents: Partial<EventModel>[] = [];
+
+                calendarPastEvents.forEach((event) => {
+                    // Convert the dates to the calendar's timezone
+                    const startDate = event.start?.dateTime ? new Date(event.start.dateTime) : null;
+                    const endDate = event.end?.dateTime ? new Date(event.end.dateTime) : null;
+
+                    pastEvents.push({
+                        id        : `${event.id}`,
+                        name      : `${event.subject}`,
+                        startDate : startDate?.toISOString(),
+                        endDate   : endDate?.toISOString(),
+                        allDay    : event.isAllDay || false
+                    });
+                });
+
+                calendarFutureEvents.forEach((event) => {
+                    // Convert the dates to the calendar's timezone
+                    const startDate = event.start?.dateTime ? new Date(event.start.dateTime) : null;
+                    const endDate = event.end?.dateTime ? new Date(event.end.dateTime) : null;
+
+                    futureEvents.push({
+                        id        : `${event.id}`,
+                        name      : `${event.subject}`,
+                        startDate : startDate?.toISOString(),
+                        endDate   : endDate?.toISOString(),
+                        allDay    : event.isAllDay || false
+                    });
+                });
+
+                setEvents(currentEvents => {
+                    return [...pastEvents, ...(currentEvents || []), ...futureEvents];
+                });
+            }
+            catch (err) {
+                const error = err as Error;
+                console.log('dfd');
+
+                app.displayError!(error.message);
+            }
+        }
+        fetchAllData();
+    }, [app.user, app.authProvider, app.displayError, app.isLoading, app.user?.timeZone]);
+
+
     useEffect(() => {
         if (app.error) {
-            Toast.show({ 
-                html: app.error.message, 
-                timeout: 0
+            Toast.show({
+                html    : app.error.message,
+                timeout : 0
             });
         }
     }, [app.error]);
@@ -193,11 +257,11 @@ export default function Calendar() {
                         <a href="https://bryntum.com/products/calendar/">
                       Bryntum Calendar Component.
                         </a>{' '}
-                    By signing in, you'll be able to see how real events from your
-                    Outlook Calendar are displayed in the Bryntum Calendar. You'll also
+                    By signing in, you&apos;ll be able to see how real events from your
+                    Outlook Calendar are displayed in the Bryntum Calendar. You&apos;ll also
                     be able to edit your events in the Bryntum Calendar component and
                     see those changles reflect on your Outlook Calendar. Note that after
-                    signing in, you'll need to grant us read and write access to your
+                    signing in, you&apos;ll need to grant us read and write access to your
                     Outlook Calendar. We do not store any events for longer than needed
                     to display them and send any changes back to Outlook Calendar and we
                     do not do anything with your data beyond what is strictly needed for

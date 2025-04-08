@@ -1,6 +1,3 @@
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
-
 import { Client, GraphRequestOptions, PageCollection, PageIterator } from '@microsoft/microsoft-graph-client';
 import { AuthCodeMSALBrowserAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/authCodeMsalBrowser';
 import { endOfWeek, startOfWeek } from 'date-fns';
@@ -15,7 +12,6 @@ function ensureClient(authProvider: AuthCodeMSALBrowserAuthenticationProvider) {
             authProvider : authProvider
         });
     }
-
     return graphClient;
 }
 
@@ -27,7 +23,6 @@ export async function getUser(authProvider: AuthCodeMSALBrowserAuthenticationPro
     // Only retrieve the specific fields needed
         .select('displayName,mail,mailboxSettings,userPrincipalName')
         .get();
-
     return user;
 }
 
@@ -41,17 +36,13 @@ export async function getUserWeekCalendar(authProvider: AuthCodeMSALBrowserAuthe
     const startDateTime = fromZonedTime(startOfWeek(now), timeZone).toISOString();
     const endDateTime = fromZonedTime(endOfWeek(now), timeZone).toISOString();
 
-    // GET /me/calendarview?startDateTime=''&endDateTime=''
-    // &$select=subject,organizer,start,end
-    // &$orderby=start/dateTime
-    // &$top=250
     const response: PageCollection = await graphClient!
         .api('/me/calendarview')
         .header('Prefer', `outlook.timezone="${timeZone}"`)
         .query({ startDateTime : startDateTime, endDateTime : endDateTime })
         .select('id, subject, start, end, isAllDay')
         .orderby('start/dateTime')
-        .top(250)
+        .top(1000)
         .get();
 
     if (response['@odata.nextLink']) {
@@ -78,6 +69,88 @@ export async function getUserWeekCalendar(authProvider: AuthCodeMSALBrowserAuthe
 
         return response.value;
     }
+}
+
+export async function getUserPastCalendar(authProvider: AuthCodeMSALBrowserAuthenticationProvider,
+    timeZone: string,
+    daysInPast: number = 365): Promise<Event[]> {
+    ensureClient(authProvider);
+
+    // Calculate the date range
+    const now = new Date();
+    const endDateTime = fromZonedTime(startOfWeek(now), timeZone).toISOString();
+    const startDateTime = new Date(now.getTime() - (daysInPast * 24 * 60 * 60 * 1000)).toISOString();
+
+    // GET /me/calendarview with pagination support
+    const response: PageCollection = await graphClient!
+        .api('/me/calendarview')
+        .header('Prefer', `outlook.timezone="${timeZone}"`)
+        .query({ startDateTime, endDateTime })
+        .select('id, subject, start, end, isAllDay')
+        .orderby('start/dateTime')
+        .top(1000)  // Maximum events per page
+        .get();
+
+    // If there are more than 1000 events, handle pagination
+    if (response['@odata.nextLink']) {
+        const events: Event[] = [];
+
+        const options: GraphRequestOptions = {
+            headers : { 'Prefer' : `outlook.timezone="${timeZone}"` }
+        };
+
+        // Use PageIterator to automatically handle fetching all pages
+        const pageIterator = new PageIterator(graphClient!, response, (event) => {
+            events.push(event);
+            return true;
+        }, options);
+
+        await pageIterator.iterate();
+        return events;
+    }
+
+    return response.value;
+}
+
+export async function getUserFutureCalendar(authProvider: AuthCodeMSALBrowserAuthenticationProvider,
+    timeZone: string,
+    daysInFuture: number = 365): Promise<Event[]> {
+    ensureClient(authProvider);
+
+    // Calculate the date range
+    const now = new Date();
+    const startDateTime = fromZonedTime(endOfWeek(now), timeZone).toISOString();
+    const endDateTime = new Date(endOfWeek(now).getTime() + (daysInFuture * 24 * 60 * 60 * 1000)).toISOString();
+
+    // GET /me/calendarview with pagination support
+    const response: PageCollection = await graphClient!
+        .api('/me/calendarview')
+        .header('Prefer', `outlook.timezone="${timeZone}"`)
+        .query({ startDateTime, endDateTime })
+        .select('id, subject, start, end, isAllDay')
+        .orderby('start/dateTime')
+        .top(1000)  // Maximum events per page
+        .get();
+
+    // If there are more than 1000 events, handle pagination
+    if (response['@odata.nextLink']) {
+        const events: Event[] = [];
+
+        const options: GraphRequestOptions = {
+            headers : { 'Prefer' : `outlook.timezone="${timeZone}"` }
+        };
+
+        // Use PageIterator to automatically handle fetching all pages
+        const pageIterator = new PageIterator(graphClient!, response, (event) => {
+            events.push(event);
+            return true;
+        }, options);
+
+        await pageIterator.iterate();
+        return events;
+    }
+
+    return response.value;
 }
 
 export async function createEvent(authProvider: AuthCodeMSALBrowserAuthenticationProvider,

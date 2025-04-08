@@ -96,7 +96,6 @@ function useProvideAppContext() {
                     if (account) {
                         // Get the user from Microsoft Graph
                         const user = await getUser(authProvider);
-
                         setUser({
                             displayName : user.displayName || '',
                             email       : user.mail || user.userPrincipalName || '',
@@ -106,7 +105,6 @@ function useProvideAppContext() {
                     }
                 }
                 catch (err: any) {
-                    console.log(err);
                     displayError(err.message);
                 }
                 finally {
