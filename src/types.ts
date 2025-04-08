@@ -1,6 +1,6 @@
 import { Model, ProjectConsumer, ProjectModelMixin, Store } from '@bryntum/calendar';
 
-export type SyncDataParams = {
+export interface SyncDataParams {
   source: typeof ProjectConsumer | any;
   project: typeof ProjectModelMixin | any;
   store: Store;
@@ -8,4 +8,4 @@ export type SyncDataParams = {
   record: Model;
   records: Model[];
   changes: object
-} | undefined | string;
+}

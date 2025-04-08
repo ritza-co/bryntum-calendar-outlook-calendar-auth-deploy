@@ -31,17 +31,16 @@ export default [
             ...react.configs.recommended.rules,
             ...react.configs['jsx-runtime'].rules,
             ...reactHooks.configs.recommended.rules,
-            'react/jsx-no-target-blank'            : 'off',
-            'react-refresh/only-export-components' : [
-                'warn',
-                { allowConstantExport : true }
-            ],
-            'react/jsx-uses-react'     : 'off',
-            'react/react-in-jsx-scope' : 'off',
-            'accessor-pairs'           : 'off',
-            'array-bracket-spacing'    : ['warn', 'never'],
-            'array-callback-return'    : 'off',
-            'brace-style'              : [
+            '@typescript-eslint/no-explicit-any'         : 'off',
+            '@typescript-eslint/no-unsafe-function-type' : 'off',
+            'react/jsx-no-target-blank'                  : 'off',
+            'react-refresh/only-export-components'       : 'off',
+            'react/jsx-uses-react'                       : 'off',
+            'react/react-in-jsx-scope'                   : 'off',
+            'accessor-pairs'                             : 'off',
+            'array-bracket-spacing'                      : ['warn', 'never'],
+            'array-callback-return'                      : 'off',
+            'brace-style'                                : [
                 'warn',
                 'stroustrup',
                 {
@@ -97,6 +96,7 @@ export default [
             'no-trailing-spaces'           : 'warn',
             'no-unmodified-loop-condition' : 'off',
             'no-unused-expressions'        : 'off',
+            'no-unused-vars'               : 'off',
             'no-use-before-define'         : 'off',
             'node/no-callback-literal'     : 'off',
             'object-curly-spacing'         : ['warn', 'always'],
