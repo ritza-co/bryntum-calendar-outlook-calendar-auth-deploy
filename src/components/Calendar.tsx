@@ -1,23 +1,15 @@
 import { useAppContext } from '../AppContext';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { findIana } from 'windows-iana';
-import { getUserFutureCalendar, getUserPastCalendar, getUserWeekCalendar } from '../GraphService';
+import { getUserFutureCalendar, getUserPastCalendar, getUserWeekCalendar } from '../graphService';
 import SignInModal from './SignInModal';
 import { AuthenticatedTemplate, UnauthenticatedTemplate } from '@azure/msal-react';
 import { BryntumButton, BryntumCalendar } from '@bryntum/calendar-react';
 import bryntumLogo from '../assets/bryntum-symbol-white.svg';
-import { EventModel, Model, ProjectConsumer, ProjectModelMixin, Store, Toast } from '@bryntum/calendar';
+import { EventModel, Toast } from '@bryntum/calendar';
 import { BryntumSync } from '../crudHelpers';
-
-interface SyncDataParams {
-    source: typeof ProjectConsumer;
-    project: typeof ProjectModelMixin;
-    store: Store;
-    action: 'remove' | 'removeAll' | 'add' | 'clearchanges' | 'filter' | 'update' | 'dataset' | 'replace';
-    record: Model;
-    records: Model[];
-    changes: object
-}
+import { SyncDataParams } from '../types';
+import { createCalendarConfig } from '../calendarConfig';
 
 export default function Calendar() {
     const app = useAppContext();
@@ -117,7 +109,7 @@ export default function Calendar() {
                 }
                 catch (err) {
                     const error = err as Error;
-          app.displayError!(error.message);
+                    app.displayError!(error.message);
                 }
             }
         };
@@ -175,8 +167,6 @@ export default function Calendar() {
             }
             catch (err) {
                 const error = err as Error;
-                console.log('dfd');
-
                 app.displayError!(error.message);
             }
         }
@@ -193,26 +183,9 @@ export default function Calendar() {
         }
     }, [app.error]);
 
-    const calendarConfig = useMemo(() => ({
-        defaultMode      : 'week',
-        timeZone         : 'Africa/Johannesburg',
-        eventEditFeature : {
-            items : {
-                nameField : {
-                    required : true
-                },
-                resourceField   : null,
-                recurrenceCombo : null
-            }
-        },
-        eventMenuFeature : {
-            items : {
-                duplicate : null
-            }
-        },
-        onDataChange     : syncData,
-        onAfterEventSave : addRecord
-    }), [syncData, addRecord]);
+    const calendarProps = useMemo(() =>
+        createCalendarConfig({ syncData, addRecord })
+    , [syncData, addRecord]);
 
     return (
         <>
@@ -248,7 +221,7 @@ export default function Calendar() {
                 eventStore={{
                     data : events
                 }}
-                {...calendarConfig}
+                {...calendarProps}
             />
             <div className="notice-info">
                 <div className="notice-info-container">

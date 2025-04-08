@@ -8,8 +8,8 @@ import { AuthCodeMSALBrowserAuthenticationProvider } from '@microsoft/microsoft-
 import { InteractionType, PublicClientApplication } from '@azure/msal-browser';
 import { useMsal } from '@azure/msal-react';
 
-import { getUser } from './GraphService';
-import config from './Config';
+import { getUser } from './graphService';
+import msalConfig from './msalConfig';
 
 export interface AppUser {
   displayName?: string,
@@ -82,7 +82,7 @@ function useProvideAppContext() {
     msal.instance as PublicClientApplication,
     {
         account         : msal.instance.getActiveAccount()!,
-        scopes          : config.scopes,
+        scopes          : msalConfig.scopes,
         interactionType : InteractionType.Popup
     }
     );
@@ -122,7 +122,7 @@ function useProvideAppContext() {
         setIsLoading(true);
         try {
             await msal.instance.loginPopup({
-                scopes : config.scopes,
+                scopes : msalConfig.scopes,
                 prompt : 'select_account'
             });
 

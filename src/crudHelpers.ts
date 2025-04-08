@@ -1,5 +1,5 @@
 import { AuthCodeMSALBrowserAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/authCodeMsalBrowser';
-import { createEvent, updateEvent, deleteEvent } from './GraphService';
+import { createEvent, updateEvent, deleteEvent } from './graphService';
 import { EventModel } from '@bryntum/calendar';
 import React from 'react';
 import { differenceInDays } from 'date-fns';
